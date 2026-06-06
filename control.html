@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Score Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #000a0a;
+  font-family: 'Orbitron', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+.title {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #666;
+  margin-bottom: 24px;
+}
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+.score-block { text-align: center; }
+.score-num { font-size: 64px; font-weight: 900; line-height: 1; }
+.score-num.w { color: #0ff; text-shadow: 0 0 20px rgba(0,255,255,0.5); }
+.score-num.l { color: #f0f; text-shadow: 0 0 20px rgba(255,0,255,0.5); }
+.score-lbl { font-size: 10px; letter-spacing: 2px; color: #555; margin-top: 4px; }
+.divider { font-size: 40px; color: #333; padding-bottom: 16px; }
+.btn-group { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 340px; }
+.btn-row { display: flex; gap: 10px; }
+.btn {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  padding: 16px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  background: transparent;
+  flex: 1;
+  transition: all 0.15s;
+}
+.btn:active { transform: scale(0.96); opacity: 0.7; }
+.win-add { color: #0ff; border: 2px solid rgba(0,255,255,0.5); }
+.win-add:hover { background: rgba(0,255,255,0.1); }
+.win-sub { color: #0aa; border: 2px solid rgba(0,200,200,0.3); font-size: 11px; }
+.win-sub:hover { background: rgba(0,255,255,0.05); }
+.loss-add { color: #f0f; border: 2px solid rgba(255,0,255,0.5); }
+.loss-add:hover { background: rgba(255,0,255,0.1); }
+.loss-sub { color: #a0a; border: 2px solid rgba(200,0,200,0.3); font-size: 11px; }
+.loss-sub:hover { background: rgba(255,0,255,0.05); }
+.reset-btn {
+  color: #555;
+  border: 1px solid rgba(255,255,255,0.15);
+  font-size: 11px;
+  padding: 12px 0;
+  width: 100%;
+  margin-top: 6px;
+}
+.reset-btn:hover { background: rgba(255,255,255,0.05); color: #888; }
+.status {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #333;
+  margin-top: 16px;
+}
+.status.ok { color: #0ff; }
+.status.err { color: #f00; }
+</style>
+</head>
+<body>
+<div class="title">SCORE CONTROL PANEL</div>
+
+<div class="score-display">
+  <div class="score-block">
+    <div class="score-num w" id="wins">00</div>
+    <div class="score-lbl">WINS</div>
+  </div>
+  <div class="divider">:</div>
+  <div class="score-block">
+    <div class="score-num l" id="losses">00</div>
+    <div class="score-lbl">LOSSES</div>
+  </div>
+</div>
+
+<div class="btn-group">
+  <div class="btn-row">
+    <button class="btn win-add" onclick="change('wins', 1)">+ WIN</button>
+    <button class="btn win-sub" onclick="change('wins', -1)">- WIN</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn loss-add" onclick="change('losses', 1)">+ LOSS</button>
+    <button class="btn loss-sub" onclick="change('losses', -1)">- LOSS</button>
+  </div>
+  <button class="btn reset-btn" onclick="resetScore()">RESET SCORE</button>
+</div>
+
+<div class="status" id="status">CONNECTING...</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const app = initializeApp({
+  databaseURL: "https://tallycounter-43685-default-rtdb.firebaseio.com"
+});
+const db = getDatabase(app);
+const scoreRef = ref(db, 'score');
+
+function fmt(n) { return n < 10 ? '0' + n : '' + n; }
+
+var wins = 0, losses = 0;
+
+onValue(scoreRef, (snap) => {
+  var data = snap.val() || { wins: 0, losses: 0 };
+  wins = data.wins || 0;
+  losses = data.losses || 0;
+  document.getElementById('wins').innerText = fmt(wins);
+  document.getElementById('losses').innerText = fmt(losses);
+  document.getElementById('status').innerText = 'CONNECTED';
+  document.getElementById('status').className = 'status ok';
+}, (err) => {
+  document.getElementById('status').innerText = 'CONNECTION ERROR';
+  document.getElementById('status').className = 'status err';
+});
+
+window.change = function(type, delta) {
+  var val = type === 'wins' ? wins : losses;
+  val = Math.max(0, val + delta);
+  var update = { wins, losses };
+  update[type] = val;
+  set(scoreRef, update);
+};
+
+window.resetScore = function() {
+  set(scoreRef, { wins: 0, losses: 0 });
+};
+</script>
+</body>
+</html>
